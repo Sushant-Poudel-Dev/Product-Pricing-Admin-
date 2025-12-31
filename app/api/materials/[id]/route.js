@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export async function PUT(request, { params }) {
   await dbConnect();
-  const { id } = params;
+  const { id } = await params;
   try {
     const body = await request.json();
     const material = await Material.findByIdAndUpdate(id, body, {
@@ -28,7 +28,7 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   await dbConnect();
-  const { id } = params;
+  const { id } = await params;
   try {
     const material = await Material.findByIdAndDelete(id);
     if (!material) {
