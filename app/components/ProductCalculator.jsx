@@ -223,14 +223,13 @@ export default function ProductCalculator({
     profitMargin,
   ]);
 
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (selectedMaterials.length === 0) {
       alert("Please select materials first");
       return;
     }
 
     const productData = {
-      id: editingProductId || `${product.id}_${Date.now()}`,
       productId: product.id,
       productName: product.title,
       customName: customName || product.title,
@@ -250,31 +249,30 @@ export default function ProductCalculator({
       unitPrice: unitFinalPrice,
       profitMargin: margin.percentage,
       profitAmount: margin.amount,
-      date: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      date: new Date(),
     };
 
-    // Load existing products
-    const existing = localStorage.getItem("finalizedProducts");
-    let products = existing ? JSON.parse(existing) : [];
-
-    if (editingProductId) {
-      products = products.map((p) =>
-        p.id === editingProductId ? productData : p
-      );
-    } else {
-      products.push(productData);
+    try {
+      if (editingProductId) {
+        const res = await fetch(`/api/products/${editingProductId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productData),
+        });
+        if (!res.ok) throw new Error("Failed to update product");
+      } else {
+        const res = await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productData),
+        });
+        if (!res.ok) throw new Error("Failed to save product");
+      }
+      router.push("/");
+    } catch (error) {
+      console.error("Error saving product:", error);
+      alert("Failed to save product");
     }
-
-    localStorage.setItem("finalizedProducts", JSON.stringify(products));
-
-    // Navigate to home
-    router.push("/");
   };
 
   return (

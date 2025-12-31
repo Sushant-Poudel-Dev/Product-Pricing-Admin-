@@ -12,23 +12,49 @@ export default function ProductsTablePage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
-    loadSavedProducts();
+    fetchProducts();
   }, []);
 
-  const loadSavedProducts = () => {
-    const saved = localStorage.getItem("finalizedProducts");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setSavedProducts(parsed);
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch("/api/products");
+      const data = await res.json();
+      if (data.success) {
+        const mapped = data.data.map((p) => ({
+          ...p,
+          id: p._id,
+          date: new Date(p.date).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        }));
+        setSavedProducts(mapped);
+      }
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
     }
   };
 
-  const handleDeleteProduct = (id) => {
-    const updated = savedProducts.filter((p) => p.id !== id);
-    localStorage.setItem("finalizedProducts", JSON.stringify(updated));
-    setSavedProducts(updated);
-    if (selectedProduct?.id === id) {
-      setSelectedProduct(null);
+  const handleDeleteProduct = async (id) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        fetchProducts();
+        if (selectedProduct?.id === id) {
+          setSelectedProduct(null);
+        }
+      } else {
+        alert("Failed to delete product");
+      }
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+      alert("Failed to delete product");
     }
   };
 

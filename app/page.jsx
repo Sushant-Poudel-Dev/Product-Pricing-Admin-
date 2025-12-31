@@ -15,15 +15,30 @@ export default function Home() {
   });
 
   useEffect(() => {
-    loadSavedProducts();
+    fetchProducts();
   }, []);
 
-  const loadSavedProducts = () => {
-    const saved = localStorage.getItem("finalizedProducts");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setSavedProducts(parsed);
-      calculateStats(parsed);
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch("/api/products");
+      const data = await res.json();
+      if (data.success) {
+        const mapped = data.data.map((p) => ({
+          ...p,
+          id: p._id,
+          date: new Date(p.date).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        }));
+        setSavedProducts(mapped);
+        calculateStats(mapped);
+      }
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
     }
   };
 
@@ -46,11 +61,21 @@ export default function Home() {
     });
   };
 
-  const handleDeleteProduct = (id) => {
-    const updated = savedProducts.filter((p) => p.id !== id);
-    localStorage.setItem("finalizedProducts", JSON.stringify(updated));
-    setSavedProducts(updated);
-    calculateStats(updated);
+  const handleDeleteProduct = async (id) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        fetchProducts();
+      } else {
+        alert("Failed to delete product");
+      }
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+      alert("Failed to delete product");
+    }
   };
 
   const handleEditProduct = (product) => {
@@ -210,16 +235,6 @@ export default function Home() {
                   className='px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors cursor-pointer'
                 >
                   View All
-                </button>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem("finalizedProducts");
-                    setSavedProducts([]);
-                    calculateStats([]);
-                  }}
-                  className='text-sm text-red-600 hover:text-red-700 font-medium cursor-pointer'
-                >
-                  Clear All
                 </button>
               </div>
             </div>

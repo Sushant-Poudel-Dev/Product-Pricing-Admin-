@@ -34,16 +34,26 @@ export default function MaterialSelector({
     return "beads";
   };
 
-  // initialize materials with category tagging + persisted custom
+  // Fetch materials from API
+  const fetchMaterials = async () => {
+    try {
+      const res = await fetch("/api/materials");
+      const data = await res.json();
+      if (data.success) {
+        const mapped = data.data.map((m) => ({
+          ...m,
+          id: m._id, // Map _id to id for compatibility
+        }));
+        setMaterialsList(mapped);
+      }
+    } catch (error) {
+      console.error("Failed to fetch materials:", error);
+    }
+  };
+
   useEffect(() => {
-    const base = allMaterials.map((m) => ({
-      ...m,
-      category: m.category || inferCategory(m.id),
-    }));
-    const customStored = localStorage.getItem("customMaterials");
-    const custom = customStored ? JSON.parse(customStored) : [];
-    setMaterialsList([...base, ...custom]);
-  }, [allMaterials]);
+    fetchMaterials();
+  }, []);
 
   const groupedMaterials = useMemo(() => {
     return materialsList.reduce((acc, material) => {
@@ -96,61 +106,77 @@ export default function MaterialSelector({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleAddMaterial = () => {
+  const handleAddMaterial = async () => {
     if (!newMaterial.name || !newMaterial.price) {
       alert("Please add a name and price for the material");
       return;
     }
 
-    let updated;
-    if (editingMaterialId) {
-      // Update existing
-      updated = materialsList.map((m) =>
-        m.id === editingMaterialId
-          ? {
-              ...m,
-              ...newMaterial,
-              price: parseFloat(newMaterial.price) || 0,
-            }
-          : m
-      );
-      setEditingMaterialId(null);
-    } else {
-      // Add new
-      const material = {
-        ...newMaterial,
-        id: `custom-${Date.now()}`,
-        price: parseFloat(newMaterial.price) || 0,
-      };
-      updated = [...materialsList, material];
-    }
+    try {
+      if (editingMaterialId) {
+        // Update existing
+        const res = await fetch(`/api/materials/${editingMaterialId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newMaterial),
+        });
+        if (res.ok) {
+          fetchMaterials();
+          setEditingMaterialId(null);
+        } else {
+          alert("Failed to update material");
+        }
+      } else {
+        // Add new
+        const res = await fetch("/api/materials", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newMaterial),
+        });
+        if (res.ok) {
+          fetchMaterials();
+        } else {
+          alert("Failed to add material");
+        }
+      }
 
-    const custom = updated.filter((m) => m.id.startsWith("custom-"));
-    localStorage.setItem("customMaterials", JSON.stringify(custom));
-    setMaterialsList(updated);
-    setNewMaterial({
-      name: "",
-      price: "",
-      unit: "per piece",
-      category: "beads",
-      image: "",
-    });
-    setShowAddForm(false);
+      setNewMaterial({
+        name: "",
+        price: "",
+        unit: "per piece",
+        category: "beads",
+        image: "",
+      });
+      setShowAddForm(false);
+    } catch (error) {
+      console.error("Error saving material:", error);
+      alert("Failed to save material");
+    }
   };
 
   const handleDeleteMaterial = (id) => {
     setMaterialToDelete(id);
   };
 
-  const confirmDeleteMaterial = () => {
+  const confirmDeleteMaterial = async () => {
     if (!materialToDelete) return;
-    const id = materialToDelete;
-    const updated = materialsList.filter((m) => m.id !== id);
-    const custom = updated.filter((m) => m.id.startsWith("custom-"));
-    localStorage.setItem("customMaterials", JSON.stringify(custom));
-    setMaterialsList(updated);
-    setSelectedMaterials((prev) => prev.filter((m) => m.id !== id));
-    setMaterialToDelete(null);
+    try {
+      const res = await fetch(`/api/materials/${materialToDelete}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        fetchMaterials();
+        setSelectedMaterials((prev) =>
+          prev.filter((m) => m.id !== materialToDelete)
+        );
+        setMaterialToDelete(null);
+      } else {
+        alert("Failed to delete material");
+      }
+    } catch (error) {
+      console.error("Error deleting material:", error);
+      alert("Failed to delete material");
+    }
   };
 
   const handleAddMaterialImage = (file) => {
