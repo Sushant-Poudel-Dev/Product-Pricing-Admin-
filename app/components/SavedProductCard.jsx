@@ -10,10 +10,28 @@ export default function SavedProductCard({ product, onDelete, onEdit }) {
   const finalPrice = product.sellingPrice || product.totalPrice || 0;
   const unitFinalPrice =
     product.unitPrice || finalPrice / (product.quantity || 1);
-  const totalCost = product.totalCost || 0;
-  const labor = (product.laborCost || 0) * (product.quantity || 1);
-  const profitAmount = product.profitAmount || finalPrice - totalCost + labor;
-  const profitMargin = finalPrice > 0 ? (profitAmount / finalPrice) * 100 : 0;
+
+  const quantity = product.quantity || 1;
+
+  // Calculate costs based on components to ensure consistency
+  const materialsCostPerUnit = product.materials
+    ? product.materials.reduce((sum, m) => sum + m.price * m.quantity, 0)
+    : 0;
+
+  const laborCostPerUnit = parseFloat(product.laborCost) || 0;
+  const additionalCostPerUnit = parseFloat(product.additionalCost) || 0;
+
+  const totalMaterialsCost = materialsCostPerUnit * quantity;
+  const totalLaborCost = laborCostPerUnit * quantity;
+  const totalAdditionalCost = additionalCostPerUnit * quantity;
+
+  // Display Total Cost includes Labor (as per request "Then i see that the total price is 50")
+  const displayTotalCost =
+    totalMaterialsCost + totalLaborCost + totalAdditionalCost;
+
+  // Profit Margin = Selling Price - (Total Cost - Labor)
+  // Profit = Selling Price - (Materials + Additional)
+  const profitMarginAmount = finalPrice - (displayTotalCost - totalLaborCost);
 
   return (
     <>
@@ -87,9 +105,6 @@ export default function SavedProductCard({ product, onDelete, onEdit }) {
             </div>
             <div className='text-sm text-gray-500 mt-1'>
               NPR {unitFinalPrice.toFixed(2)} per unit
-            </div>
-            <div className='text-xs text-gray-500 mt-1'>
-              Margin {profitMargin.toFixed(1)}% (NPR {profitAmount.toFixed(2)})
             </div>
           </div>
           <div className='text-xs text-gray-400'>Click to view details</div>

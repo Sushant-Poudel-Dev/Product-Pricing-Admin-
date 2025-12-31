@@ -52,20 +52,34 @@ export default function Home() {
       (sum, p) => sum + (p.sellingPrice ?? p.totalPrice ?? 0),
       0
     );
-    const totalCost = products.reduce((sum, p) => sum + (p.totalCost ?? 0), 0);
+
     const totalLabor = products.reduce(
       (sum, p) => sum + (p.laborCost || 0) * (p.quantity || 1),
       0
     );
-    const totalProfitAmount = totalValue - totalCost + totalLabor;
-    const totalProfitMargin =
-      totalValue > 0 ? (totalProfitAmount / totalValue) * 100 : 0;
+
+    const totalMaterialCost = products.reduce((sum, p) => {
+      const matCost = p.materials
+        ? p.materials.reduce((mSum, m) => mSum + m.price * m.quantity, 0)
+        : 0;
+      return sum + matCost * (p.quantity || 1);
+    }, 0);
+
+    const totalAdditionalCost = products.reduce(
+      (sum, p) => sum + (parseFloat(p.additionalCost) || 0) * (p.quantity || 1),
+      0
+    );
+
+    // Profit = Revenue - (Material + Additional)
+    // Labor is treated as profit
+    const totalCostForProfit = totalMaterialCost + totalAdditionalCost;
+    const totalProfit = totalValue - totalCostForProfit;
 
     setStats({
       totalProducts: total,
       totalValue,
-      totalProfitMargin,
-      totalProfitAmount,
+      totalProfitMargin: totalProfit,
+      totalProfitAmount: totalProfit,
     });
   };
 
@@ -183,9 +197,6 @@ export default function Home() {
                   }`}
                 >
                   NPR {stats.totalProfitAmount.toFixed(2)}
-                </p>
-                <p className='text-sm text-gray-500 mt-1'>
-                  Margin {stats.totalProfitMargin.toFixed(1)}%
                 </p>
               </div>
               <div className='w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center'>

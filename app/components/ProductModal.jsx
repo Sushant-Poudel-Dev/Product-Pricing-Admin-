@@ -23,11 +23,28 @@ export default function ProductModal({ product, onClose, onDelete }) {
   const finalPrice = product.sellingPrice || product.totalPrice || 0;
   const unitFinalPrice =
     product.unitPrice || finalPrice / (product.quantity || 1);
-  const totalCost = product.totalCost || product.totalPrice || 0;
-  const profitAmount = product.profitAmount || finalPrice - totalCost;
-  const profitMargin =
-    product.profitMargin ||
-    (finalPrice > 0 ? (profitAmount / finalPrice) * 100 : 0);
+
+  const quantity = product.quantity || 1;
+
+  const materialsCostPerUnit = product.materials
+    ? product.materials.reduce((sum, m) => sum + m.price * m.quantity, 0)
+    : 0;
+
+  const laborCostPerUnit = parseFloat(product.laborCost) || 0;
+  const additionalCostPerUnit = parseFloat(product.additionalCost) || 0;
+
+  const totalMaterialsCost = materialsCostPerUnit * quantity;
+  const totalLaborCost = laborCostPerUnit * quantity;
+  const totalAdditionalCost = additionalCostPerUnit * quantity;
+
+  // Display Total Cost includes Labor
+  const displayTotalCost =
+    totalMaterialsCost + totalLaborCost + totalAdditionalCost;
+
+  // Profit Margin = Selling Price - (Total Cost - Labor)
+  const profitAmount = finalPrice - (displayTotalCost - totalLaborCost);
+
+  const profitMargin = finalPrice > 0 ? (profitAmount / finalPrice) * 100 : 0;
 
   return createPortal(
     <>
@@ -159,7 +176,7 @@ export default function ProductModal({ product, onClose, onDelete }) {
                   <div className='flex items-center justify-between'>
                     <span className='text-sm text-gray-600'>Total Cost</span>
                     <span className='text-xl font-semibold text-gray-900'>
-                      NPR {totalCost.toFixed(2)}
+                      NPR {displayTotalCost.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -167,14 +184,16 @@ export default function ProductModal({ product, onClose, onDelete }) {
                 {/* Labor and Additional Cost */}
                 <div className='grid grid-cols-2 gap-4'>
                   <div className='bg-gray-50 rounded-lg p-3 border border-gray-200'>
-                    <div className='text-xs text-gray-500 mb-1'>Labor Cost</div>
+                    <div className='text-xs text-gray-500 mb-1'>
+                      Labor Charge
+                    </div>
                     <div className='text-sm font-medium text-gray-900'>
                       NPR {product.laborCost?.toFixed(2) || "0.00"}
                     </div>
                   </div>
                   <div className='bg-gray-50 rounded-lg p-3 border border-gray-200'>
                     <div className='text-xs text-gray-500 mb-1'>
-                      Additional Cost
+                      Additional Charge
                     </div>
                     <div className='text-sm font-medium text-gray-900'>
                       NPR {product.additionalCost?.toFixed(2) || "0.00"}
@@ -185,13 +204,13 @@ export default function ProductModal({ product, onClose, onDelete }) {
                 {/* Profit Info */}
                 <div className='bg-gray-50 rounded-lg p-4 border border-gray-200'>
                   <div className='flex items-center justify-between mb-2'>
-                    <span className='text-sm text-gray-600'>Profit Amount</span>
+                    <span className='text-sm text-gray-600'>Net Profit</span>
                     <span className='text-lg font-semibold text-gray-900'>
                       NPR {profitAmount.toFixed(2)}
                     </span>
                   </div>
                   <div className='flex items-center justify-between'>
-                    <span className='text-sm text-gray-600'>Profit Margin</span>
+                    <span className='text-sm text-gray-600'>Net Margin</span>
                     <span className='text-sm font-semibold text-gray-900'>
                       {profitMargin.toFixed(1)}%
                     </span>

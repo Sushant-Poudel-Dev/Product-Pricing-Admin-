@@ -192,7 +192,7 @@ export default function ProductsTablePage() {
                     Final Price
                   </th>
                   <th className='w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                    Profit
+                    Net Profit
                   </th>
                   <th className='w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
                     Date
@@ -251,15 +251,32 @@ export default function ProductsTablePage() {
                   filteredProducts.map((product) => {
                     const finalPrice =
                       product.sellingPrice || product.totalPrice || 0;
-                    const totalCost =
-                      product.totalCost || product.totalPrice || 0;
-                    const labor =
-                      (product.laborCost || 0) * (product.quantity || 1);
-                    const profitAmount =
-                      product.profitAmount || finalPrice - totalCost + labor;
-                    const profitMargin =
-                      product.profitMargin ||
-                      (finalPrice > 0 ? (profitAmount / finalPrice) * 100 : 0);
+
+                    const quantity = product.quantity || 1;
+
+                    const materialsCostPerUnit = product.materials
+                      ? product.materials.reduce(
+                          (sum, m) => sum + m.price * m.quantity,
+                          0
+                        )
+                      : 0;
+
+                    const laborCostPerUnit = parseFloat(product.laborCost) || 0;
+                    const additionalCostPerUnit =
+                      parseFloat(product.additionalCost) || 0;
+
+                    const totalMaterialsCost = materialsCostPerUnit * quantity;
+                    const totalLaborCost = laborCostPerUnit * quantity;
+                    const totalAdditionalCost =
+                      additionalCostPerUnit * quantity;
+
+                    // Display Total Cost includes Labor
+                    const displayTotalCost =
+                      totalMaterialsCost + totalLaborCost + totalAdditionalCost;
+
+                    // Profit Margin = Selling Price - (Total Cost - Labor)
+                    const profitMarginAmount =
+                      finalPrice - (displayTotalCost - totalLaborCost);
 
                     return (
                       <tr
@@ -306,7 +323,7 @@ export default function ProductsTablePage() {
                         </td>
                         <td className='px-4 py-4'>
                           <div className='text-sm font-medium text-gray-900'>
-                            NPR {totalCost.toFixed(2)}
+                            NPR {displayTotalCost.toFixed(2)}
                           </div>
                         </td>
                         <td className='px-4 py-4'>
@@ -316,10 +333,7 @@ export default function ProductsTablePage() {
                         </td>
                         <td className='px-4 py-4'>
                           <div className='text-sm font-semibold text-green-600'>
-                            NPR {profitAmount.toFixed(2)}
-                          </div>
-                          <div className='text-xs text-gray-500'>
-                            {profitMargin.toFixed(1)}%
+                            NPR {profitMarginAmount.toFixed(2)}
                           </div>
                         </td>
                         <td className='px-4 py-4'>

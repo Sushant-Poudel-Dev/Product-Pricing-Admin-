@@ -14,6 +14,7 @@ export default function MaterialSelector({
   const [searchTerm, setSearchTerm] = useState("");
   const [collapsedCategories, setCollapsedCategories] = useState({});
   const [materialsList, setMaterialsList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newMaterial, setNewMaterial] = useState({
     name: "",
@@ -37,6 +38,7 @@ export default function MaterialSelector({
   // Fetch materials from API
   const fetchMaterials = async () => {
     try {
+      setIsLoading(true);
       const res = await fetch("/api/materials");
       const data = await res.json();
       if (data.success) {
@@ -48,6 +50,8 @@ export default function MaterialSelector({
       }
     } catch (error) {
       console.error("Failed to fetch materials:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -409,49 +413,73 @@ export default function MaterialSelector({
 
             {/* Materials Grid - Minimal Design */}
             <div className='space-y-8'>
-              {Object.entries(groupedMaterials).map(([category, materials]) => {
-                const filtered = filterMaterials(materials);
-                if (filtered.length === 0) return null;
-                const isCollapsed = collapsedCategories[category];
-
-                return (
-                  <div key={category}>
-                    <button
-                      onClick={() => toggleCategory(category)}
-                      className='w-full flex items-center justify-between mb-4 cursor-pointer hover:text-pink-600 transition-colors'
-                    >
-                      <h2 className='text-lg font-semibold text-gray-900 capitalize'>
-                        {category}
-                      </h2>
-                      <svg
-                        className={`w-5 h-5 text-gray-400 transform transition-transform ${
-                          isCollapsed ? "rotate-180" : ""
-                        }`}
-                        fill='none'
-                        stroke='currentColor'
-                        viewBox='0 0 24 24'
-                      >
-                        <path
-                          strokeLinecap='round'
-                          strokeLinejoin='round'
-                          strokeWidth={2}
-                          d='M19 9l-7 7-7-7'
-                        />
-                      </svg>
-                    </button>
-
-                    {!isCollapsed && (
+              {isLoading ? (
+                <div className='space-y-8'>
+                  {[1, 2].map((category) => (
+                    <div key={category}>
+                      <div className='h-8 w-32 bg-gray-200 rounded mb-4 animate-pulse' />
                       <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
-                        {filtered.map((material) => {
-                          const isSelected = selectedMaterials.some(
-                            (m) => m.id === material.id
-                          );
+                        {[1, 2, 3, 4].map((item) => (
+                          <div
+                            key={item}
+                            className='rounded-lg border border-gray-200 bg-white overflow-hidden'
+                          >
+                            <div className='h-32 bg-gray-200 animate-pulse' />
+                            <div className='p-3 space-y-2'>
+                              <div className='h-4 w-3/4 bg-gray-200 rounded animate-pulse' />
+                              <div className='h-3 w-1/2 bg-gray-200 rounded animate-pulse' />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                Object.entries(groupedMaterials).map(
+                  ([category, materials]) => {
+                    const filtered = filterMaterials(materials);
+                    if (filtered.length === 0) return null;
+                    const isCollapsed = collapsedCategories[category];
 
-                          return (
-                            <div
-                              key={material.id}
-                              onClick={() => toggleMaterial(material)}
-                              className={`
+                    return (
+                      <div key={category}>
+                        <button
+                          onClick={() => toggleCategory(category)}
+                          className='w-full flex items-center justify-between mb-4 cursor-pointer hover:text-pink-600 transition-colors'
+                        >
+                          <h2 className='text-lg font-semibold text-gray-900 capitalize'>
+                            {category}
+                          </h2>
+                          <svg
+                            className={`w-5 h-5 text-gray-400 transform transition-transform ${
+                              isCollapsed ? "rotate-180" : ""
+                            }`}
+                            fill='none'
+                            stroke='currentColor'
+                            viewBox='0 0 24 24'
+                          >
+                            <path
+                              strokeLinecap='round'
+                              strokeLinejoin='round'
+                              strokeWidth={2}
+                              d='M19 9l-7 7-7-7'
+                            />
+                          </svg>
+                        </button>
+
+                        {!isCollapsed && (
+                          <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
+                            {filtered.map((material) => {
+                              const isSelected = selectedMaterials.some(
+                                (m) => m.id === material.id
+                              );
+
+                              return (
+                                <div
+                                  key={material.id}
+                                  onClick={() => toggleMaterial(material)}
+                                  className={`
                                 group relative overflow-hidden rounded-lg border-2 transition-all cursor-pointer hover-lift animate-scale-in
                                 ${
                                   isSelected
@@ -459,107 +487,109 @@ export default function MaterialSelector({
                                     : "border-gray-200 bg-white hover:border-gray-300"
                                 }
                               `}
-                            >
-                              {/* Material Image */}
-                              <div className='relative h-32 overflow-hidden bg-gray-100'>
-                                {material.image ? (
-                                  <img
-                                    src={material.image}
-                                    alt={material.name}
-                                    className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-200'
-                                    onError={(e) => {
-                                      e.target.style.display = "none";
-                                    }}
-                                  />
-                                ) : (
-                                  <div className='w-full h-full flex items-center justify-center text-3xl'>
-                                    📦
+                                >
+                                  {/* Material Image */}
+                                  <div className='relative h-32 overflow-hidden bg-gray-100'>
+                                    {material.image ? (
+                                      <img
+                                        src={material.image}
+                                        alt={material.name}
+                                        className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-200'
+                                        onError={(e) => {
+                                          e.target.style.display = "none";
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className='w-full h-full flex items-center justify-center text-3xl'>
+                                        📦
+                                      </div>
+                                    )}
+                                    {isSelected && (
+                                      <div className='absolute top-2 right-2 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center'>
+                                        <svg
+                                          className='w-4 h-4 text-white'
+                                          fill='none'
+                                          stroke='currentColor'
+                                          viewBox='0 0 24 24'
+                                        >
+                                          <path
+                                            strokeLinecap='round'
+                                            strokeLinejoin='round'
+                                            strokeWidth={3}
+                                            d='M5 13l4 4L19 7'
+                                          />
+                                        </svg>
+                                      </div>
+                                    )}
+                                    <div className='absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+                                      <button
+                                        type='button'
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditMaterial(material);
+                                        }}
+                                        className='w-7 h-7 bg-white/80 backdrop-blur text-gray-700 rounded-full flex items-center justify-center hover:text-blue-600 hover:bg-white cursor-pointer shadow-sm'
+                                        title='Edit material'
+                                      >
+                                        <svg
+                                          className='w-4 h-4'
+                                          fill='none'
+                                          stroke='currentColor'
+                                          viewBox='0 0 24 24'
+                                        >
+                                          <path
+                                            strokeLinecap='round'
+                                            strokeLinejoin='round'
+                                            strokeWidth={2}
+                                            d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
+                                          />
+                                        </svg>
+                                      </button>
+                                      <button
+                                        type='button'
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteMaterial(material.id);
+                                        }}
+                                        className='w-7 h-7 bg-white/80 backdrop-blur text-gray-700 rounded-full flex items-center justify-center hover:text-red-600 hover:bg-white cursor-pointer shadow-sm'
+                                        title='Delete material'
+                                      >
+                                        <svg
+                                          className='w-4 h-4'
+                                          fill='none'
+                                          stroke='currentColor'
+                                          viewBox='0 0 24 24'
+                                        >
+                                          <path
+                                            strokeLinecap='round'
+                                            strokeLinejoin='round'
+                                            strokeWidth={2}
+                                            d='M6 18L18 6M6 6l12 12'
+                                          />
+                                        </svg>
+                                      </button>
+                                    </div>
                                   </div>
-                                )}
-                                {isSelected && (
-                                  <div className='absolute top-2 right-2 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center'>
-                                    <svg
-                                      className='w-4 h-4 text-white'
-                                      fill='none'
-                                      stroke='currentColor'
-                                      viewBox='0 0 24 24'
-                                    >
-                                      <path
-                                        strokeLinecap='round'
-                                        strokeLinejoin='round'
-                                        strokeWidth={3}
-                                        d='M5 13l4 4L19 7'
-                                      />
-                                    </svg>
-                                  </div>
-                                )}
-                                <div className='absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
-                                  <button
-                                    type='button'
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEditMaterial(material);
-                                    }}
-                                    className='w-7 h-7 bg-white/80 backdrop-blur text-gray-700 rounded-full flex items-center justify-center hover:text-blue-600 hover:bg-white cursor-pointer shadow-sm'
-                                    title='Edit material'
-                                  >
-                                    <svg
-                                      className='w-4 h-4'
-                                      fill='none'
-                                      stroke='currentColor'
-                                      viewBox='0 0 24 24'
-                                    >
-                                      <path
-                                        strokeLinecap='round'
-                                        strokeLinejoin='round'
-                                        strokeWidth={2}
-                                        d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
-                                      />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    type='button'
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteMaterial(material.id);
-                                    }}
-                                    className='w-7 h-7 bg-white/80 backdrop-blur text-gray-700 rounded-full flex items-center justify-center hover:text-red-600 hover:bg-white cursor-pointer shadow-sm'
-                                    title='Delete material'
-                                  >
-                                    <svg
-                                      className='w-4 h-4'
-                                      fill='none'
-                                      stroke='currentColor'
-                                      viewBox='0 0 24 24'
-                                    >
-                                      <path
-                                        strokeLinecap='round'
-                                        strokeLinejoin='round'
-                                        strokeWidth={2}
-                                        d='M6 18L18 6M6 6l12 12'
-                                      />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
 
-                              {/* Material Info */}
-                              <div className='p-3'>
-                                <h3 className='font-medium text-gray-900 text-sm mb-1 line-clamp-2'>
-                                  {material.name}
-                                </h3>
-                                <p className='text-xs text-gray-600'>
-                                  NPR {material.price} / {material.unit}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
+                                  {/* Material Info */}
+                                  <div className='p-3'>
+                                    <h3 className='font-medium text-gray-900 text-sm mb-1 line-clamp-2'>
+                                      {material.name}
+                                    </h3>
+                                    <p className='text-xs text-gray-600'>
+                                      NPR {material.price} / {material.unit}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  }
+                )
+              )}
             </div>
           </div>
 

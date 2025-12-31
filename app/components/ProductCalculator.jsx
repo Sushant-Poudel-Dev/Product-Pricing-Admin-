@@ -110,6 +110,7 @@ export default function ProductCalculator({
     const additional = parseFloat(additionalCost) || 0;
     const qty = parseFloat(quantity) || 1;
 
+    // Total Cost includes Labor (User wants to see Total Price = 50 when Mat=20, Labor=30)
     const unitCost = materialsTotal + labor + additional;
     return unitCost * qty;
   };
@@ -132,18 +133,26 @@ export default function ProductCalculator({
   };
 
   const calculateProfitMargin = () => {
-    const totalCost = calculateTotal();
+    const totalCost = calculateTotal(); // Includes Labor
     const finalPrice = calculateFinalPrice();
     const labor = (parseFloat(laborCost) || 0) * (parseFloat(quantity) || 1);
 
     if (finalPrice === 0 || totalCost === 0)
-      return { percentage: 0, amount: 0 };
+      return { percentage: 0, amount: 0, grossAmount: 0, grossPercentage: 0 };
 
-    const profitWithLabor = finalPrice - totalCost + labor;
+    // Gross Profit = Selling Price - Total Cost
+    const grossProfitAmount = finalPrice - totalCost;
+    const grossProfitPercentage = (grossProfitAmount / finalPrice) * 100;
+
+    // Net Profit = Gross Profit + Labor Charge
+    const netProfitAmount = grossProfitAmount + labor;
+    const netProfitPercentage = (netProfitAmount / finalPrice) * 100;
 
     return {
-      percentage: (profitWithLabor / finalPrice) * 100,
-      amount: profitWithLabor,
+      percentage: netProfitPercentage,
+      amount: netProfitAmount,
+      grossAmount: grossProfitAmount,
+      grossPercentage: grossProfitPercentage,
     };
   };
 
@@ -167,18 +176,22 @@ export default function ProductCalculator({
       const labor = parseFloat(laborCost) || 0;
       const additional = parseFloat(additionalCost) || 0;
       const qty = parseFloat(quantity) || 1;
-      const totalCost = (materialsTotal + labor + additional) * qty;
+
+      // Cost basis for margin calculation excludes labor (since labor is profit)
+      const costBasis = (materialsTotal + additional) * qty;
 
       const margin = parseFloat(profitMargin) || 0;
-      let calculatedPrice = totalCost;
+      let calculatedPrice = 0;
 
       if (marginType === "percentage") {
+        // Selling Price = CostBasis / (1 - Margin%)
         calculatedPrice =
           margin > 0 && margin < 100
-            ? totalCost / (1 - margin / 100)
-            : totalCost;
+            ? costBasis / (1 - margin / 100)
+            : costBasis;
       } else {
-        calculatedPrice = totalCost + margin;
+        // Selling Price = CostBasis + MarginAmount
+        calculatedPrice = costBasis + margin;
       }
 
       const currentPrice = parseFloat(sellingPrice) || 0;
@@ -207,11 +220,14 @@ export default function ProductCalculator({
       const labor = parseFloat(laborCost) || 0;
       const additional = parseFloat(additionalCost) || 0;
       const qty = parseFloat(quantity) || 1;
-      const totalCost = (materialsTotal + labor + additional) * qty;
+
+      // Cost basis for margin calculation excludes labor
+      const costBasis = (materialsTotal + additional) * qty;
 
       const selling = parseFloat(sellingPrice) || 0;
-      if (selling > 0 && totalCost > 0) {
-        const marginPercent = ((selling - totalCost) / selling) * 100;
+      if (selling > 0 && costBasis > 0) {
+        // Margin % = ((Selling - CostBasis) / Selling) * 100
+        const marginPercent = ((selling - costBasis) / selling) * 100;
         const currentMargin = parseFloat(profitMargin) || 0;
         if (Math.abs(marginPercent - currentMargin) > 0.01) {
           setProfitMargin(marginPercent.toFixed(2));
@@ -482,30 +498,6 @@ export default function ProductCalculator({
               <div className='space-y-4'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Labor Cost (NPR)
-                  </label>
-                  <input
-                    type='number'
-                    value={laborCost}
-                    onChange={(e) => setLaborCost(e.target.value)}
-                    placeholder='0.00'
-                    className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all'
-                  />
-                </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Additional Cost (NPR)
-                  </label>
-                  <input
-                    type='number'
-                    value={additionalCost}
-                    onChange={(e) => setAdditionalCost(e.target.value)}
-                    placeholder='0.00'
-                    className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all'
-                  />
-                </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
                     Quantity
                   </label>
                   <input
@@ -526,6 +518,31 @@ export default function ProductCalculator({
                 Pricing
               </h2>
               <div className='space-y-4'>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                    Labor Charge (NPR)
+                  </label>
+                  <input
+                    type='number'
+                    value={laborCost}
+                    onChange={(e) => setLaborCost(e.target.value)}
+                    placeholder='0.00'
+                    className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all'
+                  />
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                    Additional Charge (NPR)
+                  </label>
+                  <input
+                    type='number'
+                    value={additionalCost}
+                    onChange={(e) => setAdditionalCost(e.target.value)}
+                    placeholder='0.00'
+                    className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all'
+                  />
+                </div>
+
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
                     Pricing Mode
@@ -627,56 +644,111 @@ export default function ProductCalculator({
               </div>
             </div>
 
-            {/* Total Display */}
-            <div className='bg-pink-600 rounded-lg p-6 text-white'>
-              <div className='mb-4'>
-                <div className='text-pink-100 text-sm mb-1'>Total Cost</div>
-                <div className='text-3xl font-bold'>{total.toFixed(2)}</div>
-                {parseFloat(quantity) > 1 && (
-                  <div className='text-pink-100 text-sm mt-1'>
-                    Per unit: NPR {unitCost.toFixed(2)}
-                  </div>
-                )}
+            {/* Balance Sheet Display */}
+            <div className='bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm'>
+              <div className='bg-gray-50 px-6 py-4 border-b border-gray-200'>
+                <h3 className='text-lg font-bold text-gray-900'>
+                  Financial Summary
+                </h3>
               </div>
-              {finalPrice > 0 && (
-                <div className='pt-4 border-t border-pink-500'>
-                  <div className='mb-2'>
-                    <div className='text-pink-100 text-sm mb-1'>
-                      Final Price
-                    </div>
-                    <div className='text-4xl font-bold'>
-                      {finalPrice.toFixed(2)}
-                    </div>
-                    {parseFloat(quantity) > 1 && (
-                      <div className='text-pink-100 text-sm mt-1'>
-                        Per unit: NPR {unitFinalPrice.toFixed(2)}
-                      </div>
-                    )}
+              <div className='p-6 space-y-4'>
+                {/* Revenue */}
+                <div className='flex justify-between items-center pb-4 border-b border-gray-100'>
+                  <span className='text-gray-600 font-medium'>
+                    Selling Price (Revenue)
+                  </span>
+                  <span className='text-xl font-bold text-gray-900'>
+                    NPR {finalPrice.toFixed(2)}
+                  </span>
+                </div>
+
+                {/* COGS */}
+                <div className='space-y-2 pb-4 border-b border-gray-100'>
+                  <div className='text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2'>
+                    Cost Breakdown
                   </div>
-                  <div className='pt-3 border-t border-pink-500 space-y-2'>
-                    <div className='flex justify-between items-center'>
-                      <span className='text-pink-100 text-sm'>Profit:</span>
-                      <span className='font-semibold'>
+                  <div className='flex justify-between items-center text-sm'>
+                    <span className='text-gray-600'>Materials</span>
+                    <span className='text-gray-900'>
+                      NPR{" "}
+                      {(materialsTotal * (parseFloat(quantity) || 1)).toFixed(
+                        2
+                      )}
+                    </span>
+                  </div>
+                  <div className='flex justify-between items-center text-sm'>
+                    <span className='text-gray-600'>Labor Charge</span>
+                    <span className='text-gray-900'>
+                      NPR{" "}
+                      {(
+                        parseFloat(laborCost || 0) * (parseFloat(quantity) || 1)
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className='flex justify-between items-center text-sm'>
+                    <span className='text-gray-600'>Additional Charge</span>
+                    <span className='text-gray-900'>
+                      NPR{" "}
+                      {(
+                        parseFloat(additionalCost || 0) *
+                        (parseFloat(quantity) || 1)
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className='flex justify-between items-center pt-2 font-medium'>
+                    <span className='text-gray-800'>Total Cost</span>
+                    <span className='text-red-600'>
+                      - NPR {total.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Profit */}
+                <div className='pt-2 space-y-3'>
+                  {/* Gross Profit */}
+                  <div className='flex justify-between items-center'>
+                    <span className='text-sm font-medium text-gray-600'>
+                      Gross Profit (SP - Cost)
+                    </span>
+                    <span
+                      className={`text-sm font-bold ${
+                        margin.grossAmount >= 0
+                          ? "text-gray-900"
+                          : "text-red-600"
+                      }`}
+                    >
+                      NPR {margin.grossAmount.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Add Labor */}
+                  <div className='flex justify-between items-center text-sm text-blue-600 border-b border-gray-100 pb-2'>
+                    <span>+ Labor Charge</span>
+                    <span>
+                      NPR{" "}
+                      {(
+                        parseFloat(laborCost || 0) * (parseFloat(quantity) || 1)
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Net Profit */}
+                  <div>
+                    <div className='flex justify-between items-center mb-1'>
+                      <span className='text-lg font-bold text-gray-900'>
+                        Net Profit
+                      </span>
+                      <span className='text-2xl font-bold text-green-600'>
                         NPR {margin.amount.toFixed(2)}
                       </span>
                     </div>
-                    <div className='flex justify-between items-center'>
-                      <span className='text-pink-100 text-sm'>
-                        Profit Margin:
-                      </span>
-                      <span
-                        className={`text-xl font-bold ${
-                          margin.percentage >= 0
-                            ? "text-green-200"
-                            : "text-red-200"
-                        }`}
-                      >
-                        {margin.percentage.toFixed(1)}%
-                      </span>
+                    <div className='flex justify-between items-center text-sm text-gray-500'>
+                      <span>Net Margin</span>
+                      <span>{margin.percentage.toFixed(1)}%</span>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Save Button */}
