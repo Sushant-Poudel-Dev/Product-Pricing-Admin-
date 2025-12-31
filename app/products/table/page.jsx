@@ -7,6 +7,7 @@ import ProductModal from "../../components/ProductModal";
 export default function ProductsTablePage() {
   const router = useRouter();
   const [savedProducts, setSavedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("date"); // 'date', 'price', 'name'
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -16,6 +17,7 @@ export default function ProductsTablePage() {
   }, []);
 
   const fetchProducts = async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/products");
       const data = await res.json();
@@ -35,6 +37,8 @@ export default function ProductsTablePage() {
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -199,7 +203,42 @@ export default function ProductsTablePage() {
                 </tr>
               </thead>
               <tbody className='bg-white divide-y divide-gray-200'>
-                {filteredProducts.length === 0 ? (
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr
+                      key={i}
+                      className='animate-pulse'
+                    >
+                      <td className='px-4 py-4'>
+                        <div className='flex items-center gap-3'>
+                          <div className='w-10 h-10 bg-gray-200 rounded-lg'></div>
+                          <div className='h-4 bg-gray-200 rounded w-32'></div>
+                        </div>
+                      </td>
+                      <td className='px-4 py-4'>
+                        <div className='h-4 bg-gray-200 rounded w-12'></div>
+                      </td>
+                      <td className='px-4 py-4'>
+                        <div className='h-4 bg-gray-200 rounded w-8'></div>
+                      </td>
+                      <td className='px-4 py-4'>
+                        <div className='h-4 bg-gray-200 rounded w-20'></div>
+                      </td>
+                      <td className='px-4 py-4'>
+                        <div className='h-4 bg-gray-200 rounded w-20'></div>
+                      </td>
+                      <td className='px-4 py-4'>
+                        <div className='h-4 bg-gray-200 rounded w-24'></div>
+                      </td>
+                      <td className='px-4 py-4'>
+                        <div className='h-4 bg-gray-200 rounded w-24'></div>
+                      </td>
+                      <td className='px-4 py-4'>
+                        <div className='h-4 bg-gray-200 rounded w-16'></div>
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredProducts.length === 0 ? (
                   <tr>
                     <td
                       colSpan='8'
@@ -214,8 +253,10 @@ export default function ProductsTablePage() {
                       product.sellingPrice || product.totalPrice || 0;
                     const totalCost =
                       product.totalCost || product.totalPrice || 0;
+                    const labor =
+                      (product.laborCost || 0) * (product.quantity || 1);
                     const profitAmount =
-                      product.profitAmount || finalPrice - totalCost;
+                      product.profitAmount || finalPrice - totalCost + labor;
                     const profitMargin =
                       product.profitMargin ||
                       (finalPrice > 0 ? (profitAmount / finalPrice) * 100 : 0);

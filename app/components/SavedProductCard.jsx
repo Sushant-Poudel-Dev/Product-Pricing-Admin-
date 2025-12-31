@@ -11,7 +11,8 @@ export default function SavedProductCard({ product, onDelete, onEdit }) {
   const unitFinalPrice =
     product.unitPrice || finalPrice / (product.quantity || 1);
   const totalCost = product.totalCost || 0;
-  const profitAmount = product.profitAmount || finalPrice - totalCost;
+  const labor = (product.laborCost || 0) * (product.quantity || 1);
+  const profitAmount = product.profitAmount || finalPrice - totalCost + labor;
   const profitMargin = finalPrice > 0 ? (profitAmount / finalPrice) * 100 : 0;
 
   return (

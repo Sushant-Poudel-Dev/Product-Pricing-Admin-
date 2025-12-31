@@ -134,11 +134,16 @@ export default function ProductCalculator({
   const calculateProfitMargin = () => {
     const totalCost = calculateTotal();
     const finalPrice = calculateFinalPrice();
+    const labor = (parseFloat(laborCost) || 0) * (parseFloat(quantity) || 1);
+
     if (finalPrice === 0 || totalCost === 0)
       return { percentage: 0, amount: 0 };
+
+    const profitWithLabor = finalPrice - totalCost + labor;
+
     return {
-      percentage: ((finalPrice - totalCost) / finalPrice) * 100,
-      amount: finalPrice - totalCost,
+      percentage: (profitWithLabor / finalPrice) * 100,
+      amount: profitWithLabor,
     };
   };
 
